@@ -109,6 +109,7 @@ async function whisper(src, work, { model = 'small', lang = 'auto', onPct, dur }
   const wav = path.join(work, 'audio.wav'), out = path.join(work, 'whisper.json');
   await U.sh('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', src, '-vn', '-ac', '1', '-ar', '16000', wav]);
   // alag venv me install: system ka purana "av" (PyAV) faster-whisper se takrata tha (metadata_errors error)
+  console.log('Whisper: venv me install ho raha hai (naya code)');
   const venv = path.join(work, 'venv'), vpy = path.join(venv, 'bin', 'python');
   let py = vpy;
   try {
@@ -120,7 +121,7 @@ async function whisper(src, work, { model = 'small', lang = 'auto', onPct, dur }
     py = 'python3';
     await run(py, ['-m', 'pip', 'install', '--quiet', '--break-system-packages', '--upgrade', 'faster-whisper', 'av'], { timeout: 1200e3 });
   }
-  await run(py, [path.join(__dirname, '..', 'whisper.py'), wav, model, lang, out, String(dur || 0)], { timeout: 5 * 3600e3, onLine: l => { const m = l.match(/^PCT (\d+)/); if (m && onPct) onPct(+m[1]); } });
+  await run(py, [path.join(__dirname, '..', 'whisper.py'), wav, model, lang, out, String(dur || 0)], { timeout: 5 * 3600e3, onLine: l => { if (/^VER /.test(l)) console.log('Whisper ' + l); const m = l.match(/^PCT (\d+)/); if (m && onPct) onPct(+m[1]); } });
   const j = JSON.parse(fs.readFileSync(out, 'utf8'));
   try { fs.unlinkSync(wav); } catch { }
   return { words: j.words || [], lang: j.lang || '' };
