@@ -108,9 +108,19 @@ function parseJson3(txt) {
 async function whisper(src, work, { model = 'small', lang = 'auto', onPct, dur }) {
   const wav = path.join(work, 'audio.wav'), out = path.join(work, 'whisper.json');
   await U.sh('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', src, '-vn', '-ac', '1', '-ar', '16000', wav]);
-  try { await U.sh('python3', ['-c', 'import faster_whisper']); }
-  catch { await run('python3', ['-m', 'pip', 'install', '--quiet', '--break-system-packages', 'faster-whisper'], { timeout: 900e3 }); }
-  await run('python3', [path.join(__dirname, '..', 'whisper.py'), wav, model, lang, out, String(dur || 0)], { timeout: 5 * 3600e3, onLine: l => { const m = l.match(/^PCT (\d+)/); if (m && onPct) onPct(+m[1]); } });
+  // alag venv me install: system ka purana "av" (PyAV) faster-whisper se takrata tha (metadata_errors error)
+  const venv = path.join(work, 'venv'), vpy = path.join(venv, 'bin', 'python');
+  let py = vpy;
+  try {
+    await run('python3', ['-m', 'venv', venv], { timeout: 300e3 });
+    await run(vpy, ['-m', 'pip', 'install', '--quiet', '--upgrade', 'pip'], { timeout: 300e3 });
+    await run(vpy, ['-m', 'pip', 'install', '--quiet', '--upgrade', 'faster-whisper', 'av'], { timeout: 1200e3 });
+  } catch (e) {
+    console.log('venv install fail (' + String(e.message).slice(-120) + '), system python try kar rahe');
+    py = 'python3';
+    await run(py, ['-m', 'pip', 'install', '--quiet', '--break-system-packages', '--upgrade', 'faster-whisper', 'av'], { timeout: 1200e3 });
+  }
+  await run(py, [path.join(__dirname, '..', 'whisper.py'), wav, model, lang, out, String(dur || 0)], { timeout: 5 * 3600e3, onLine: l => { const m = l.match(/^PCT (\d+)/); if (m && onPct) onPct(+m[1]); } });
   const j = JSON.parse(fs.readFileSync(out, 'utf8'));
   try { fs.unlinkSync(wav); } catch { }
   return { words: j.words || [], lang: j.lang || '' };
