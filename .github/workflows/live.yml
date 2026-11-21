@@ -1,0 +1,45 @@
+name: LiveLoop - Live
+
+# Sirf dashboard (workflow_dispatch) se chalta hai. Koi push/PR trigger nahi => bahar wala secrets tak nahi pahunch sakta.
+on:
+  workflow_dispatch:
+    inputs:
+      live_id:
+        description: "Live ID (dashboard apne aap bharta hai)"
+        required: true
+        type: string
+
+concurrency:
+  group: live-${{ inputs.live_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      LIVE_ID: ${{ inputs.live_id }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      ENC_KEY: ${{ secrets.ENC_KEY }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      VIDEOS_TOKEN: ${{ secrets.VIDEOS_TOKEN }}
+      VIDEOS_REPO: ${{ secrets.VIDEOS_REPO }}
+      VIDEOS_TAG: ${{ secrets.VIDEOS_TAG || 'videos' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: runner
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: FFmpeg install
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg
+      - name: Live chalao
+        run: node runner/run.js
+      - name: Safai (hamesha chalta hai)
+        if: always()
+        run: node runner/cleanup.js

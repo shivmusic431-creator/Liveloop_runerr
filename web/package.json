@@ -1,0 +1,9 @@
+{
+  "name": "liveloop-web",
+  "version": "3.1.0",
+  "private": true,
+  "description": "LiveLoop dashboard + API (Vercel)",
+  "engines": {
+    "node": "24.x"
+  }
+}

@@ -1,0 +1,49 @@
+name: LiveLoop - Clips (Shorts)
+
+# Dashboard ke "Clips" tab se chalta hai. Video link Firestore me rehta hai (yahan input me nahi),
+# taaki public repo ke logs me kisi ka link/token na dikhe.
+on:
+  workflow_dispatch:
+    inputs:
+      clip_id:
+        description: "Clip job ID (dashboard apne aap bharta hai)"
+        required: true
+        type: string
+
+concurrency:
+  group: clip-${{ inputs.clip_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  clip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      CLIP_ID: ${{ inputs.clip_id }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      VIDEOS_TOKEN: ${{ secrets.VIDEOS_TOKEN }}
+      VIDEOS_REPO: ${{ secrets.VIDEOS_REPO }}
+      ENC_KEY: ${{ secrets.ENC_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: runner
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: FFmpeg, fonts, yt-dlp install
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg fontconfig fonts-noto-core
+          python3 -m pip install -q -U --break-system-packages "yt-dlp[default]"
+          yt-dlp --version
+      - name: Clips banao aur schedule karo
+        run: node runner/clip.js
+      - name: Safai (hamesha chalta hai)
+        if: always()
+        run: node runner/clip-cleanup.js

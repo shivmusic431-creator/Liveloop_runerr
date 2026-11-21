@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e1217">
+<title>LiveLoop</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e1217'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23ff4d3d'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#0e1217;--panel:#151b23;--raise:#1c242e;--line:#27313d;--tx:#e8edf2;--mu:#8795a5;--amber:#f5a524;--on-amber:#1a1204;--red:#ff4d3d;--teal:#34d1bf;--err:#ff7a70;color-scheme:dark}
+@media(prefers-color-scheme:light){:root{--bg:#f2f4f7;--panel:#fff;--raise:#eef1f5;--line:#d9e0e8;--tx:#141a21;--mu:#5d6b7a;--amber:#d98a00;--on-amber:#fff;--red:#e5301f;--teal:#0f9d8d;--err:#c93a2e;color-scheme:light}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:15px/1.5 "Noto Sans Devanagari",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 0}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+.wrap{max-width:720px;margin:0 auto;padding:14px 14px calc(88px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:10px;padding:6px 0 14px}
+.logo{display:flex;align-items:center;gap:9px;font-size:19px;font-weight:700;flex:1}
+.pill{font-size:12.5px;color:var(--mu);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:3px 10px}
+.pill.on{color:var(--red);border-color:color-mix(in srgb,var(--red) 45%,var(--line))}
+.tally{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none;position:relative}
+.tally.live{background:var(--red)}
+.tally.live::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid var(--red);opacity:.0;animation:ring 1.8s ease-out infinite}
+.tally.wait{background:var(--amber)}.tally.err{background:var(--err)}
+@keyframes ring{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.5);opacity:0}}
+@media(prefers-reduced-motion:reduce){.tally.live::after{animation:none;opacity:.5}}
+.bar{display:flex;align-items:center;gap:8px;margin:2px 0 12px}.bar h2{flex:1;font-size:17px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;position:relative}
+.card.live{border-left:3px solid var(--red);padding-left:12px}
+.card.lost,.card.error{border-left:3px solid var(--err);padding-left:12px}
+.head{display:flex;align-items:center;gap:10px}.head b{flex:1;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:12.5px;padding:2px 9px;border-radius:6px;background:var(--raise);color:var(--mu)}
+.tag.live{background:var(--red);color:#fff;font-weight:600}.tag.wait{color:var(--amber)}.tag.err{color:var(--err)}
+.mu{color:var(--mu);font-size:13.5px}.sm{font-size:13px}
+.meta{margin:6px 0 0}
+.clock{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin:10px 0 2px}
+.kv{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--mu);font-size:13.5px;margin-bottom:10px}.kv b{color:var(--tx);font-weight:500;font-variant-numeric:tabular-nums}
+.msg{font-size:13.5px;margin:8px 0;color:var(--mu)}.msg.e{color:var(--err)}
+.row{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}.row>.grow{flex:1;min-width:0}
+.btn{border:1px solid var(--line);background:var(--raise);border-radius:8px;padding:9px 14px;cursor:pointer;font-weight:500;min-height:40px}
+.btn:hover{border-color:var(--mu)}.btn:disabled{opacity:.5;cursor:default}
+.btn.p{background:var(--amber);border-color:var(--amber);color:var(--on-amber);font-weight:600}
+.btn.d{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+.btn.g{background:none}.btn.s{padding:6px 10px;min-height:34px;font-size:13.5px}
+.btn.full{width:100%}
+a{color:var(--amber)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+label{display:block;font-size:13.5px;color:var(--mu);margin:12px 0 4px}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 11px;min-height:42px}
+input[type=checkbox]{width:auto;min-height:0;accent-color:var(--amber)}
+textarea{resize:vertical}
+.hrs{max-width:150px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}
+.item .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.chip{font-size:12px;background:var(--raise);border-radius:6px;padding:1px 7px;color:var(--mu);margin-right:4px;display:inline-block}
+.prog{height:6px;background:var(--raise);border-radius:9px;overflow:hidden;margin:8px 0 4px}.prog i{display:block;height:100%;background:var(--amber);transition:width .4s}
+.empty{text-align:center;color:var(--mu);padding:34px 14px}.empty b{display:block;color:var(--tx);font-size:16px;margin-bottom:4px}
+nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:20}
+nav div{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav button{background:none;border:0;padding:9px 0 8px;color:var(--mu);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12.5px;cursor:pointer}
+nav button.on{color:var(--amber)}nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.scrim{position:fixed;inset:0;background:#000a;z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--panel);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));border:1px solid var(--line)}
+@media(min-width:700px){.scrim{align-items:center}.sheet{border-radius:16px}}
+.sheet h3{font-size:18px;margin-bottom:2px}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:55vh;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:10px 0 0}
+.ok{color:var(--teal)}.no{color:var(--err)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:60;max-width:92vw;font-size:14px;box-shadow:0 6px 24px #0006}
+.toast.e{background:var(--err);color:#fff}
+.login{max-width:380px;margin:12vh auto 0;padding:0 16px}
+.hid{display:none!important}
+.plan{margin:8px 0 2px}.plan .pi{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px}.plan .pi:last-child{border:0}.plan .pi i{font-style:normal;flex:none;width:18px;text-align:center}.plan .pi div{flex:1;min-width:0;overflow-wrap:anywhere}
+details summary{cursor:pointer;color:var(--mu);font-size:13.5px;margin-top:12px}
+</style>
+</head>
+<body>
+<div id="login" class="login hid">
+  <div class="logo" style="margin-bottom:18px"><span class="tally live"></span>LiveLoop</div>
+  <div class="card">
+    <h3 id="lt">पासवर्ड डालो</h3><p id="lm" class="mu" style="margin:4px 0 0"></p>
+    <label for="pw">Dashboard password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button class="btn p full" style="margin-top:14px" data-a="login">अंदर जाओ</button>
+  </div>
+  <p class="mu sm" style="text-align:center;margin-top:14px"><a href="#" data-a="debug">🐞 Debug console खोलो</a></p>
+</div>
+
+<div id="app" class="wrap hid">
+  <div class="top"><div class="logo"><span class="tally" id="mt"></span>LiveLoop</div><span class="pill" id="sp"></span></div>
+  <main id="view"></main>
+</div>
+<nav id="nav" class="hid"><div>
+  <button data-a="tab" data-id="lives"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4"/></svg>लाइव</button>
+  <button data-a="tab" data-id="videos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/></svg>वीडियो</button>
+  <button data-a="tab" data-id="channels"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="m8 3 4 4 4-4"/></svg>चैनल</button>
+  <button data-a="tab" data-id="clips"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg>क्लिप्स</button>
+  <button data-a="tab" data-id="setup"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.3 3h-4l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>सेटअप</button>
+</div></nav>
+<div id="layer"></div>
+
+<script>
+'use strict';
+// ---------- Eruda (mobile debug console) ----------
+const ERUDA_SRC = 'https://cdn.jsdelivr.net/npm/eruda@3.4.1/eruda.js';
+const debugOn = () => { try { return localStorage.getItem('ll_debug') === '1'; } catch { return false; } };
+const loadEruda = () => new Promise((ok, no) => {
+  if (window.eruda && window.eruda._ll) return ok();
+  const s = document.createElement('script'); s.src = ERUDA_SRC;
+  s.onload = () => { try { window.eruda.init(); window.eruda._ll = 1; ok(); } catch (e) { no(e); } };
+  s.onerror = () => no(new Error('Eruda load nahi hua (internet/CDN check karo)'));
+  document.head.appendChild(s);
+});
+if (debugOn() || /[?&]debug\b/.test(location.search)) loadEruda().catch(e => console.warn(e.message));
+window.addEventListener('unhandledrejection', e => console.error('Unhandled:', e.reason));
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const api = async (u, o = {}) => {
+  const r = await fetch(u, { credentials: 'same-origin', signal: AbortSignal.timeout(28000), ...o, headers: { 'x-liveloop': '1', 'Content-Type': 'application/json', ...(o.headers || {}) } });
+  let j = {}; try { j = await r.json(); } catch {}
+  if (!r.ok && !j.error && r.status >= 500) j.error = 'Server error ' + r.status + '. Vercel → Deployments → Functions logs देखो';
+  if (!r.ok) { if (r.status === 401 && u !== '/api/login') boot(); throw new Error(j.error || 'Error ' + r.status); }
+  return j;
+};
+const post = (u, b) => api(u, { method: 'POST', body: JSON.stringify(b || {}) });
+const del = u => api(u, { method: 'DELETE' });
+
+// ---------- helpers ----------
+const bytes = n => n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : (n / 1e6).toFixed(n < 1e7 ? 1 : 0) + ' MB';
+const dur = ms => { const s = Math.max(0, Math.floor(ms / 1000)), p = n => String(n).padStart(2, '0'); return `${p(Math.floor(s / 3600))}:${p(Math.floor(s % 3600 / 60))}:${p(s % 60)}`; };
+const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'अभी' : m < 60 ? m + ' मिनट पहले' : Math.round(m / 60) + ' घंटे पहले'; };
+let toastT; function toast(m, bad) { const old = $('.toast'); if (old) old.remove(); const t = document.createElement('div'); t.className = 'toast' + (bad ? ' e' : ''); t.setAttribute('role', 'status'); t.textContent = m; document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), bad ? 6000 : 3000); }
+const guard = fn => async (...a) => { try { return await fn(...a); } catch (e) { toast(e.message || String(e), true); } };
+
+// ---------- state ----------
+const ST = { tab: 'lives', clips: null, lives: [], accounts: [], videos: null, imports: [], health: null, info: {}, hours: {}, now: Date.now(), skew: 0 };
+const LABEL = { idle: 'तैयार', queued: 'कतार में', starting: 'शुरू हो रहा', preparing: 'YouTube तैयार', live: 'LIVE', stopping: 'रुक रहा', stopped: 'बंद', error: 'Error', lost: 'संपर्क टूटा' };
+const RUNNING = ['queued', 'starting', 'preparing', 'live', 'stopping'];
+const isImg = n => /\.(jpe?g|png)$/i.test(n);
+
+// ---------- boot / login ----------
+async function boot() {
+  stopPoll();
+  const s = await fetch('/api/session').then(r => r.json()).catch(() => ({}));
+  if (s.authed) { $('#login').classList.add('hid'); $('#app').classList.remove('hid'); $('#nav').classList.remove('hid'); start(); return; }
+  $('#app').classList.add('hid'); $('#nav').classList.add('hid'); $('#login').classList.remove('hid');
+  $('#lm').textContent = s.configured === false ? 'Vercel Environment Variables में ADMIN_PASSWORD और FIREBASE_SERVICE_ACCOUNT डालो, फिर Redeploy करो।' : 'अपना dashboard password डालो।';
+  $('#pw').focus();
+}
+const login = guard(async () => { await post('/api/login', { password: $('#pw').value }); $('#pw').value = ''; boot(); });
+$('#pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+// ---------- polling ----------
+let pt = null, alive = false;
+function stopPoll() { alive = false; clearTimeout(pt); }
+async function start() {
+  const q = new URLSearchParams(location.search);
+  if (q.get('ok')) toast(q.get('ok')); if (q.get('err')) toast(q.get('err'), true);
+  if (q.has('ok') || q.has('err')) history.replaceState(null, '', '/');
+  if (!alive) { alive = true; ST.tab = (location.hash || '#lives').slice(1); if (!['lives', 'videos', 'channels', 'clips', 'setup'].includes(ST.tab)) ST.tab = 'lives'; await poll(); }
+}
+async function poll() {
+  if (!alive) return;
+  if (!document.hidden) await refresh().catch(() => { });
+  const busy = ST.lives.some(l => RUNNING.includes(l.run.state)) || ST.imports.some(i => !['done', 'error'].includes(i.status)) || !!(ST.clips && ST.clips.active);
+  pt = setTimeout(poll, busy ? 3000 : 15000);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && alive) { clearTimeout(pt); poll(); } });
+async function refresh() {
+  const s = await api('/api/state'); ST.skew = s.now - Date.now();
+  Object.assign(ST, { lives: s.lives, accounts: s.accounts, info: s });
+  const wantImp = ST.tab === 'videos' || ST.imports.some(i => !['done', 'error'].includes(i.status));
+  if (wantImp) { const prev = ST.imports; ST.imports = await api('/api/imports'); if (ST.imports.some(i => i.status === 'done' && prev.find(p => p.id === i.id && p.status !== 'done'))) ST.videos = null; }
+  if (ST.tab === 'videos' && !ST.videos) await loadVideos();
+  if (ST.tab === 'clips' || (ST.clips && ST.clips.active)) { try { ST.clips = await api('/api/clips'); } catch (e) { if (ST.tab === 'clips') throw e; } }
+  render();
+}
+const loadVideos = async () => { try { ST.videos = await api('/api/videos'); } catch (e) { ST.videos = []; toast(e.message, true); } };
+
+// ---------- render ----------
+let lastHtml = '';
+function render() {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.id === ST.tab));
+  const n = ST.lives.filter(l => l.run.state === 'live').length, any = ST.lives.some(l => RUNNING.includes(l.run.state));
+  $('#sp').textContent = n ? `${n} LIVE` : any ? 'शुरू हो रहा' : (ST.clips && ST.clips.active) ? 'क्लिप चल रहा' : 'सब बंद'; $('#sp').className = 'pill' + (n ? ' on' : '');
+  $('#mt').className = 'tally' + (n ? ' live' : any ? ' wait' : '');
+  const html = ({ lives: vLives, videos: vVideos, channels: vChannels, clips: vClips, setup: vSetup })[ST.tab]();
+  const v = $('#view');
+  if (html !== lastHtml && !(v.contains(document.activeElement) && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) { lastHtml = html; v.innerHTML = html; }
+  clock();
+}
+function clock() {
+  const now = Date.now() + ST.skew;
+  document.querySelectorAll('[data-since]').forEach(e => { e.textContent = dur(now - +e.dataset.since); });
+  document.querySelectorAll('[data-until]').forEach(e => { e.textContent = dur(+e.dataset.until - now); });
+}
+setInterval(clock, 1000);
+
+function vLives() {
+  const L = ST.lives;
+  const head = `<div class="bar"><h2>आपके Lives</h2>${L.length ? `<button class="btn s" data-a="stopall">सब बंद</button><button class="btn s p" data-a="startall">सब शुरू</button>` : ''}</div>`;
+  if (!L.length) return head + `<div class="empty"><b>अभी कोई live नहीं है</b>पहले Videos टैब में video जोड़ो, फिर यहाँ live बनाओ।<div class="row" style="justify-content:center"><button class="btn p" data-a="edit">+ नया live</button></div></div>`;
+  return head + L.map(card).join('') + `<button class="btn full" data-a="edit">+ नया live</button>`;
+}
+function card(l) {
+  const r = l.run, st = r.state, running = RUNNING.includes(st), cls = st === 'live' ? 'live' : st === 'lost' ? 'lost' : st === 'error' ? 'error' : '';
+  const ch = l.mode === 'api' ? '📺 ' + esc((ST.accounts.find(a => a.id === l.account) || {}).title || 'channel चुनो') : '🔑 RTMP key ' + (l.hasKey ? '✔' : '✘');
+  const tally = st === 'live' ? 'live' : (running || st === 'lost') ? (st === 'lost' ? 'err' : 'wait') : st === 'error' ? 'err' : '';
+  const tag = st === 'live' ? 'live' : (running ? 'wait' : (st === 'error' || st === 'lost') ? 'err' : '');
+  let body = '';
+  if (st === 'live') body += `<div class="clock" data-since="${r.startedAt || Date.now()}">--:--:--</div><div class="kv"><span>चलते हुए</span>${r.stopAt ? `<span>बंद होने में <b data-until="${r.stopAt}">--</b></span>` : ''}<span>speed <b>${r.speed ?? '-'}x</b></span><span>fps <b>${r.fps ?? '-'}</b></span><span>reconnect <b>${r.reconnects}</b></span>${r.ytStatus ? `<span>YouTube <b>${esc(r.ytStatus)}</b></span>` : ''}</div>`;
+  if (r.msg && st !== 'live') body += `<div class="msg ${st === 'error' || st === 'lost' ? 'e' : ''}">${esc(r.msg)}</div>`;
+  if (st === 'lost') body += `<div class="msg e">Runner से 90 सेकंड से संपर्क नहीं हुआ। GitHub Actions में job देखो, फिर रीसेट करो।</div>`;
+  if (st === 'queued' && Date.now() + ST.skew - r.queuedAt > 120000) body += `<div class="msg e">2 मिनट से runner शुरू नहीं हुआ। Secrets या workflow जाँचो: <a href="${esc(ST.info.actionsUrl)}" target="_blank" rel="noopener">GitHub Actions</a></div>`;
+  if (st === 'live' && r.err) body += `<div class="msg e">⚠ ${esc(r.err)}</div>`;
+  const links = [r.watch ? `<a href="${esc(r.watch)}" target="_blank" rel="noopener">YouTube link</a>` : '', r.runUrl && running ? `<a href="${esc(r.runUrl)}" target="_blank" rel="noopener">Runner logs</a>` : ''].filter(Boolean).join(' · ');
+  if (links) body += `<div class="sm" style="margin:4px 0 2px">${links}</div>`;
+  let act;
+  if (st === 'lost') act = `<div class="row"><button class="btn d grow" data-a="reset" data-id="${l.id}">रीसेट करो</button><button class="btn" data-a="logs" data-id="${l.id}">Logs</button></div>`;
+  else if (running) act = `<div class="row"><button class="btn d grow" data-a="stop" data-id="${l.id}" ${r.stopRequested || st === 'stopping' ? 'disabled' : ''}>${r.stopRequested || st === 'stopping' ? 'रुक रहा है…' : '■ बंद करो'}</button><button class="btn" data-a="logs" data-id="${l.id}">Logs</button></div>`;
+  else act = `<div class="row"><input class="hrs" id="h-${l.id}" type="number" min="0" max="5.5" step="any" inputmode="decimal" aria-label="Auto-stop घंटे" placeholder="घंटे" value="${esc(ST.hours[l.id] ?? (l.hours || ''))}" data-h="${l.id}"><button class="btn p grow" data-a="go" data-id="${l.id}">▶ Live शुरू करो</button></div>
+  <div class="row"><button class="btn s" data-a="edit" data-id="${l.id}">Edit</button><button class="btn s" data-a="dup" data-id="${l.id}">Duplicate</button><button class="btn s" data-a="logs" data-id="${l.id}">Logs</button><button class="btn s g" data-a="rm" data-id="${l.id}">Delete</button></div>`;
+  return `<section class="card ${cls}"><div class="head"><span class="tally ${tally}"></span><b>${esc(l.name)}</b><span class="tag ${tag}">${LABEL[st] || esc(st)}</span></div>
+  <div class="mu meta">${ch} · ${l.videos.length} video · ${l.encoder === 'copy' ? 'Copy' : 'Software'}${!running && l.hours ? ` · ${l.hours} घंटे auto-stop` : ''}</div>${body}${act}</section>`;
+}
+function vVideos() {
+  const imp = ST.imports.map(i => {
+    const fin = ['done', 'error'].includes(i.status);
+    return `<div class="card"><div class="head"><b>${esc(i.name || i.host || 'import')}</b><span class="tag ${i.status === 'error' ? 'err' : i.status === 'done' ? '' : 'wait'}">${{ queued: 'कतार में', downloading: 'download', converting: 'convert', uploading: 'upload', done: 'हो गया', error: 'Error' }[i.status] || esc(i.status)}</span></div>
+    ${fin ? '' : `<div class="prog"><i style="width:${i.pct}%"></i></div>`}<div class="msg ${i.status === 'error' ? 'e' : ''}">${esc(i.msg)}</div>
+    ${fin || Date.now() - i.created > 36e5 ? `<div class="row"><button class="btn s g" data-a="dismiss" data-id="${i.id}">हटाओ</button></div>` : ''}</div>`;
+  }).join('');
+  let list;
+  if (ST.videos === null) list = '<div class="empty">लोड हो रहा है…</div>';
+  else if (!ST.videos.length) list = `<div class="empty"><b>Release में कोई file नहीं</b>ऊपर “Link से जोड़ो” दबाओ। Link सीधा download वाला होना चाहिए।</div>`;
+  else list = `<div class="card">${ST.videos.map(v => `<div class="item"><div class="nm">${isImg(v.name) ? '🖼' : '🎬'} ${esc(v.name)}<div class="mu sm">${bytes(v.size)} · ${ago(Date.parse(v.created))}${v.usedBy.length ? '<br>' + v.usedBy.map(u => `<span class="chip">${esc(u)}</span>`).join('') : ''}</div></div><button class="btn s g" data-a="rmvid" data-id="${v.id}" data-n="${esc(v.name)}" data-u="${v.usedBy.length}">हटाओ</button></div>`).join('')}</div>`;
+  return `<div class="bar"><h2>Videos</h2><button class="btn s" data-a="vrefresh">रीफ्रेश</button><button class="btn s p" data-a="import">+ Link से जोड़ो</button></div>${imp}${list}<p class="mu sm">हर file अधिकतम 2 GB। Video private repo के Release में रहता है और हर live पर runner में download होता है।</p>`;
+}
+function vChannels() {
+  const rows = ST.accounts.map(a => `<div class="item"><div class="nm">📺 ${esc(a.title)}</div><button class="btn s g" data-a="rmacc" data-id="${a.id}">हटाओ</button></div>`).join('');
+  return `<div class="bar"><h2>YouTube चैनल</h2><button class="btn s p" data-a="connect">+ चैनल जोड़ो</button></div>
+  ${rows ? `<div class="card">${rows}</div>` : `<div class="empty"><b>कोई चैनल जुड़ा नहीं</b>Google से login करके चैनल जोड़ो। फिर हर live पर stream key की ज़रूरत नहीं रहेगी।</div>`}
+  <div class="card"><b>Google Cloud में यह Redirect URI डालो</b><pre style="max-height:none;margin-top:8px">${esc(ST.info.redirect || '')}</pre><div class="row"><button class="btn s" data-a="copy" data-n="${esc(ST.info.redirect || '')}">Copy</button></div>
+  <p class="mu sm" style="margin-bottom:0">${ST.info.googleReady ? '✔ Client ID/Secret set हैं।' : '✘ Vercel env में GOOGLE_CLIENT_ID और GOOGLE_CLIENT_SECRET डालो।'} OAuth app को <b>Production</b> में रखो, वरना token 7 दिन में expire होता है।</p></div>`;
+}
+// ---------- clips ----------
+const CLABEL = { queued: 'कतार में', downloading: 'download', transcribing: 'transcript', planning: 'Gemini plan', rendering: 'clips बन रहे', uploading: 'upload', done: 'हो गया', partial: 'अधूरा', error: 'Error', stopped: 'बंद', lost: 'संपर्क टूटा' };
+const CRUN = ['queued', 'downloading', 'transcribing', 'planning', 'rendering', 'uploading'];
+const PI = { uploaded: '✔', stashed: '⏸', failed: '✘', rendering: '⚙', queued: '·' };
+const fmtT = (iso, tz) => { try { return new Date(iso).toLocaleString('hi-IN', { timeZone: tz || undefined, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return iso; } };
+function clipCard(j) {
+  const st = j.state, run = CRUN.includes(st), cls = st === 'error' || st === 'lost' ? 'error' : '', tg = run ? 'wait' : (st === 'error' || st === 'lost') ? 'err' : '';
+  const plan = j.plan.length ? `<div class="plan">${j.plan.map(c => `<div class="pi"><i>${PI[c.state] || '·'}</i><div>${esc(c.title || c.id)}<div class="mu sm">${Math.round(c.end - c.start)} सेकंड${c.publishAt ? ' · 📅 ' + esc(fmtT(c.publishAt, j.opts.tz)) : ''}${c.err ? ' · ' + esc(c.err) : ''}</div></div></div>`).join('')}</div>` : '';
+  const links = j.runUrl && run ? `<div class="sm" style="margin:4px 0 2px"><a href="${esc(j.runUrl)}" target="_blank" rel="noopener">Runner logs</a></div>` : '';
+  let act;
+  if (st === 'lost') act = `<div class="row"><button class="btn d grow" data-a="creset" data-id="${j.id}">रीसेट करो</button><button class="btn" data-a="clogs" data-id="${j.id}">Logs</button></div>`;
+  else if (run) act = `<div class="row"><button class="btn d grow" data-a="cstop" data-id="${j.id}" ${j.stopRequested ? 'disabled' : ''}>${j.stopRequested ? 'रुक रहा है…' : '■ बंद करो'}</button><button class="btn" data-a="clogs" data-id="${j.id}">Logs</button></div>`;
+  else act = `<div class="row">${st !== 'done' ? `<button class="btn p grow" data-a="cresume" data-id="${j.id}">${j.pending ? '▶ बचे हुए upload करो' : '▶ फिर से कोशिश'}</button>` : ''}<button class="btn s" data-a="clogs" data-id="${j.id}">Logs</button><button class="btn s g" data-a="crm" data-id="${j.id}">Delete</button></div>`;
+  return `<section class="card ${cls}"><div class="head"><b>${esc(j.url.replace(/^https?:\/\/(www\.)?/, ''))}</b><span class="tag ${tg}">${CLABEL[st] || esc(st)}</span></div>
+  ${run ? `<div class="prog"><i style="width:${j.pct}%"></i></div>` : ''}<div class="msg ${st === 'error' || st === 'lost' ? 'e' : ''}">${esc(j.msg)}</div>
+  ${st === 'lost' ? '<div class="msg e">Runner से 2 मिनट से संपर्क नहीं हुआ। GitHub Actions में job देखो, फिर रीसेट करो।</div>' : ''}
+  ${st === 'queued' && Date.now() + ST.skew - j.queuedAt > 120000 ? `<div class="msg e">2 मिनट से runner शुरू नहीं हुआ। Secrets या workflow जाँचो: <a href="${esc(ST.info.actionsUrl)}" target="_blank" rel="noopener">GitHub Actions</a></div>` : ''}
+  <div class="kv"><span>Gemini calls <b>${j.calls}</b></span><span>${j.opts.perDay || 1}/दिन</span><span>${esc(j.opts.tz || '')}</span></div>${plan}${links}${act}</section>`;
+}
+function vClips() {
+  const c = ST.clips;
+  if (!c) return '<div class="bar"><h2>क्लिप्स</h2></div><div class="empty">लोड हो रहा है…</div>';
+  const alive = c.keys.filter(k => !k.dead).length;
+  const keys = c.keys.map(k => `<div class="item"><div class="nm">${k.dead ? '<span class="no">✘</span>' : '<span class="ok">✔</span>'} ${esc(k.label)} <span class="chip">${esc(k.hint)}</span><div class="mu sm">${k.dead ? esc(k.deadReason || 'band') : (k.cool.length ? k.cool.length + ' model अभी रुके (quota)' : 'सब model चालू')} · आज ${k.today} call${k.lastErr && !k.dead ? '<br>' + esc(k.lastErr) : ''}</div></div><button class="btn s g" data-a="krm" data-id="${k.id}" data-n="${esc(k.label)}">हटाओ</button></div>`).join('');
+  const vids = c.vids.length ? `<div class="card"><b>हाल में schedule हुए</b>${c.vids.map(v => `<div class="item"><div class="nm"><a href="https://studio.youtube.com/video/${esc(v.id)}/edit" target="_blank" rel="noopener">${esc(v.title || v.id)}</a><div class="mu sm">📅 ${esc(fmtT(v.publishAt))}</div></div></div>`).join('')}</div>` : '';
+  return `<div class="bar"><h2>क्लिप्स</h2><button class="btn s p" data-a="cnew">+ नया क्लिप जॉब</button></div>
+  ${c.jobs.length ? c.jobs.map(clipCard).join('') : `<div class="empty"><b>अभी कोई क्लिप जॉब नहीं</b>YouTube video का link दो। सिस्टम उसे download करके Gemini से best parts निकलवाएगा, captions वाली Shorts बनाएगा और रोज़ एक के हिसाब से schedule कर देगा।</div>`}
+  ${vids}
+  <div class="card"><div class="head"><b>🔑 Gemini API keys</b><span class="tag ${alive ? '' : 'err'}">${alive} चालू</span></div>
+  <p class="mu sm" style="margin:6px 0 0">हर key अलग Google project की हो (aistudio.google.com/apikey → “Create API key” → नया project)। एक ही project की कई keys का free quota साझा रहता है।</p>
+  ${keys || '<div class="mu sm" style="margin-top:8px">अभी कोई key नहीं है</div>'}
+  <div class="row"><button class="btn s p" data-a="kadd">+ Key जोड़ो</button>${c.keys.length ? '<button class="btn s" data-a="kreset">सब दोबारा चालू करो</button>' : ''}</div></div>
+  <div class="card"><div class="head"><b>🍪 YouTube cookies (ज़रूरत हो तो)</b><span class="tag ${c.cookies ? '' : ''}">${c.cookies ? 'सेव हैं' : 'नहीं'}</span></div>
+  <p class="mu sm" style="margin:6px 0 0">YouTube कभी GitHub के IP पर “bot check” लगाता है। तब cookies.txt (Netscape format) डालो। <b>अपने मुख्य account की नहीं, अलग/नए Google account की cookies</b> इस्तेमाल करो।</p>
+  <div class="row"><button class="btn s" data-a="ckadd">${c.cookies ? 'बदलो' : '+ Cookies डालो'}</button>${c.cookies ? '<button class="btn s g" data-a="ckrm">हटाओ</button>' : ''}</div></div>
+  <p class="mu sm">सिर्फ़ अपने या licensed videos के clips बनाओ। दूसरों के video पर copyright strike आ सकती है।</p>`;
+}
+function vSetup() {
+  const h = ST.health;
+  const list = h === null ? '<div class="mu">जाँच चल रही है…</div>' : h.map(x => `<div class="item"><span class="${x.ok ? 'ok' : 'no'}">${x.ok ? '✔' : '✘'}</span><div class="nm">${esc(x.name)}<div class="mu sm">${esc(x.msg)}</div></div></div>`).join('');
+  return `<div class="bar"><h2>सेटअप जाँच</h2><button class="btn s" data-a="health">दोबारा जाँचो</button></div><div class="card">${list}</div>
+  <p class="mu sm">Runner के secrets (GitHub में) यहाँ से जाँचे नहीं जा सकते। पहला test live चलाकर देखो।${ST.info.actionsUrl ? ` <a href="${esc(ST.info.actionsUrl)}" target="_blank" rel="noopener">GitHub Actions खोलो</a>` : ''}</p>
+  <div class="card"><b>Debug console (Eruda)</b><p class="mu sm" style="margin:4px 0 0">Error, network calls और console logs देखने के लिए। चालू करने पर नीचे दाएँ एक गियर बटन आता है।</p><div class="row"><button class="btn s" data-a="debug">${debugOn() ? 'बंद करो' : 'चालू करो'}</button><span class="mu sm">${debugOn() ? '✔ अभी चालू है' : 'अभी बंद है'}</span></div></div>
+  <button class="btn full" data-a="logout">Logout</button>`;
+}
+
+// ---------- sheets ----------
+const layer = $('#layer');
+const openSheet = html => { layer.innerHTML = `<div class="scrim" data-a="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`; };
+const closeSheet = () => { layer.innerHTML = ''; clearInterval(logT); if (askRes) { const r = askRes; askRes = null; r(false); } };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+let askRes = null;
+const ask = (title, text, ok, danger) => new Promise(res => { askRes = res; openSheet(`<h3>${esc(title)}</h3><p class="mu">${esc(text)}</p><div class="row"><button class="btn grow" data-a="no">रहने दो</button><button class="btn grow ${danger ? 'd' : 'p'}" data-a="yes">${esc(ok)}</button></div>`); });
+const answer = v => { const r = askRes; askRes = null; closeSheet(); if (r) r(v); };
+
+let E = null;
+async function editLive(id, dup) {
+  if (ST.videos === null) await loadVideos();
+  const x = id ? ST.lives.find(l => l.id === id) : { name: '', mode: ST.accounts.length ? 'api' : 'manual', account: (ST.accounts[0] || {}).id || '', title: '', description: '', tags: [], privacy: 'unlisted', thumb: '', videos: [], encoder: 'copy', quality: 'hd', fit: 'crop', orient: 'v', hours: 0, complete: true, url: 'rtmp://a.rtmp.youtube.com/live2', hasKey: false };
+  E = { id: dup ? '' : (id || ''), x, videos: [...x.videos], hasKey: x.hasKey && !dup };
+  drawEdit(dup ? x.name + ' 2' : x.name);
+}
+function drawEdit(name) {
+  const x = E.x, imgs = (ST.videos || []).filter(v => isImg(v.name)), vids = (ST.videos || []).filter(v => !isImg(v.name) && !E.videos.includes(v.name));
+  const opt = (v, t, cur) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${t}</option>`;
+  openSheet(`<h3>${E.id ? 'Live edit' : 'नया live'}</h3>
+  <label for="e-name">नाम</label><input id="e-name" value="${esc(name ?? '')}" maxlength="40">
+  <label for="e-mode">तरीका</label><select id="e-mode" data-ch="mode">${opt('api', 'YouTube API (हर बार अपने आप broadcast)', x.mode)}${opt('manual', 'Manual (RTMP URL + Stream Key)', x.mode)}</select>
+  <div id="e-man" class="${x.mode === 'api' ? 'hid' : ''}"><label for="e-url">RTMP URL</label><input id="e-url" value="${esc(x.url)}"><label for="e-key">Stream Key ${E.hasKey ? '<span class="ok">(सेव है। नया डालो तो बदलेगा)</span>' : ''}</label><input id="e-key" type="password" autocomplete="off"></div>
+  <div id="e-api" class="${x.mode === 'api' ? '' : 'hid'}">
+    <label for="e-acc">YouTube चैनल</label><select id="e-acc">${ST.accounts.map(a => opt(a.id, esc(a.title), x.account)).join('') || '<option value="">पहले Channels टैब में चैनल जोड़ो</option>'}</select>
+    <label for="e-title">Title</label><input id="e-title" value="${esc(x.title)}" maxlength="100" placeholder="खाली = live का नाम">
+    <label for="e-desc">Description</label><textarea id="e-desc" rows="3">${esc(x.description)}</textarea>
+    <div class="grid2"><div><label for="e-tags">Tags (comma से)</label><input id="e-tags" value="${esc(x.tags.join(', '))}"></div><div><label for="e-priv">Privacy</label><select id="e-priv">${opt('unlisted', 'Unlisted', x.privacy)}${opt('public', 'Public', x.privacy)}${opt('private', 'Private', x.privacy)}</select></div></div>
+    <label for="e-thumb">Thumbnail (JPG/PNG, 2MB तक)</label><select id="e-thumb"><option value="">कोई नहीं</option>${imgs.map(v => opt(v.name, esc(v.name), x.thumb)).join('')}</select>
+    <label style="display:flex;gap:8px;align-items:center;color:var(--tx)"><input type="checkbox" id="e-cp" ${x.complete ? 'checked' : ''}>बंद होने पर YouTube broadcast पूरा करो</label>
+  </div>
+  <label>Videos (playlist, इसी क्रम में loop होगा)</label>
+  ${E.videos.length ? E.videos.map((v, i) => `<div class="item"><div class="nm">🎬 ${esc(v)}</div><button class="btn s g" data-a="vup" data-id="${i}" aria-label="ऊपर">▲</button><button class="btn s g" data-a="vdn" data-id="${i}" aria-label="नीचे">▼</button><button class="btn s g" data-a="vrm" data-id="${i}" aria-label="हटाओ">✕</button></div>`).join('') : '<div class="mu sm">अभी कोई video चुना नहीं</div>'}
+  ${vids.length ? `<label>उपलब्ध videos</label>${vids.map(v => `<div class="item"><div class="nm">${esc(v.name)} <span class="mu sm">${bytes(v.size)}</span></div><button class="btn s" data-a="vadd" data-n="${esc(v.name)}">+ जोड़ो</button></div>`).join('')}` : (!E.videos.length ? '<div class="mu sm" style="margin-top:6px">Videos टैब में “Link से जोड़ो” से video जोड़ो।</div>' : '')}
+  <div class="grid2"><div><label for="e-enc">Encoder</label><select id="e-enc" data-ch="enc">${opt('copy', 'Copy (CPU लगभग 0)', x.encoder)}${opt('sw', 'Software (re-encode)', x.encoder)}</select></div>
+  <div><label for="e-hrs">Auto-stop (घंटे)</label><input id="e-hrs" type="number" min="0" max="5.5" step="any" inputmode="decimal" value="${x.hours || ''}" placeholder="0 = 5.5"></div></div>
+  <div id="e-sw" class="${x.encoder === 'sw' ? '' : 'hid'}"><div class="grid2"><div><label for="e-q">Quality</label><select id="e-q">${opt('low', '360p', x.quality)}${opt('med', '480p', x.quality)}${opt('hd', '720p HD', x.quality)}${opt('fhd', '1080p', x.quality)}</select></div><div><label for="e-br">Bitrate kbps</label><input id="e-br" type="number" value="${x.bitrate || ''}" placeholder="auto"></div></div>
+  <div class="grid2"><div><label for="e-or">Orientation</label><select id="e-or">${opt('v', 'Vertical 9:16', x.orient)}${opt('h', 'Horizontal 16:9', x.orient)}</select></div><div><label for="e-fit">Fit</label><select id="e-fit">${opt('crop', 'Center crop', x.fit)}${opt('pad', 'Black bars', x.fit)}</select></div></div></div>
+  <p class="mu sm">Copy mode सबसे हल्का है, पर video H.264+AAC और हर 2-4 सेकंड पर keyframe वाला होना चाहिए। Import में “ज़रूरत हो तो convert” यही ठीक करता है। मेल न खाए तो runner अपने आप Software पर चला जाता है।</p>
+  <div class="row"><button class="btn grow" data-a="close">रद्द करो</button><button class="btn p grow" data-a="savelive">Save करो</button></div>`);
+}
+function readEdit() {
+  const v = id => $('#' + id);
+  return { id: E.id, name: v('e-name').value, mode: v('e-mode').value, url: v('e-url').value, key: v('e-key').value, account: v('e-acc').value, title: v('e-title').value, description: v('e-desc').value, tags: v('e-tags').value, privacy: v('e-priv').value, thumb: v('e-thumb').value, complete: v('e-cp').checked, videos: E.videos, encoder: v('e-enc').value, hours: v('e-hrs').value, quality: v('e-q').value, bitrate: v('e-br').value, orient: v('e-or').value, fit: v('e-fit').value };
+}
+function keepEdit() { if (!E) return; const keep = layer.querySelector('#e-name') ? readEdit() : null; if (keep) { Object.assign(E.x, { mode: keep.mode, url: keep.url, account: keep.account, title: keep.title, description: keep.description, tags: keep.tags.split(','), privacy: keep.privacy, thumb: keep.thumb, complete: keep.complete, encoder: keep.encoder, hours: +keep.hours || 0, quality: keep.quality, bitrate: keep.bitrate, orient: keep.orient, fit: keep.fit }); E.x.tags = E.x.tags.map(s => s.trim()).filter(Boolean); return keep; } }
+layer.addEventListener('change', e => {
+  const c = e.target.dataset.ch; if (!c) return;
+  if (c === 'mode') { $('#e-man').classList.toggle('hid', e.target.value === 'api'); $('#e-api').classList.toggle('hid', e.target.value !== 'api'); }
+  if (c === 'enc') $('#e-sw').classList.toggle('hid', e.target.value !== 'sw');
+});
+
+function importSheet() {
+  openSheet(`<h3>Link से video जोड़ो</h3><p class="mu sm" style="margin:2px 0 0">Runner link से download करेगा और private Release में रखेगा। Link सीधा file का हो (Dropbox में <code>?dl=1</code>)।</p>
+  <label for="i-url">Direct download link</label><input id="i-url" type="url" inputmode="url" placeholder="https://…/video.mp4 (या .jpg/.png thumbnail)" autocomplete="off">
+  <label for="i-name">नाम (खाली = link से)</label><input id="i-name" maxlength="90">
+  <label for="i-conv">H.264 convert</label><select id="i-conv" data-ch="conv"><option value="auto">ज़रूरत हो तो (सुझाया गया)</option><option value="force">हमेशा convert करो</option><option value="none">जैसा है वैसा रखो</option></select>
+  <div id="i-opt"><div class="grid2"><div><label for="i-or">Orientation</label><select id="i-or"><option value="v">Vertical 9:16</option><option value="h">Horizontal 16:9</option></select></div><div><label for="i-q">Quality</label><select id="i-q"><option value="low">360p</option><option value="med">480p</option><option value="hd" selected>720p HD</option><option value="fhd">1080p</option></select></div></div>
+  <label for="i-fit">Fit</label><select id="i-fit"><option value="crop">Center crop</option><option value="pad">Black bars</option></select></div>
+  <p class="mu sm">Convert सिर्फ़ तब होता है जब video copy-mode के लायक न हो (codec, audio या keyframe gap)। Convert के बाद भी file 2 GB से छोटी होनी चाहिए।</p>
+  <div class="row"><button class="btn grow" data-a="close">रद्द करो</button><button class="btn p grow" data-a="doimport">Import शुरू करो</button></div>`);
+}
+layer.addEventListener('change', e => { if (e.target.dataset.ch === 'conv') $('#i-opt').classList.toggle('hid', e.target.value === 'none'); });
+
+function clipSheet() {
+  if (!ST.accounts.length) return toast('पहले Channels टैब में YouTube चैनल जोड़ो', true);
+  const o = (v, t, d) => `<option value="${v}" ${d === v ? 'selected' : ''}>${t}</option>`;
+  openSheet(`<h3>नया क्लिप जॉब</h3><p class="mu sm" style="margin:2px 0 0">Runner video download करेगा, Gemini best parts निकालेगा, clips बनाकर YouTube पर रोज़ एक के हिसाब से schedule करेगा।</p>
+  <label for="c-url">YouTube video link</label><input id="c-url" type="url" inputmode="url" placeholder="https://youtu.be/…" autocomplete="off">
+  <label for="c-acc">किस चैनल पर schedule हो</label><select id="c-acc">${ST.accounts.map(a => `<option value="${esc(a.id)}">${esc(a.title)}</option>`).join('')}</select>
+  <div class="grid2"><div><label for="c-clips">कितने clips (0 = अपने आप)</label><input id="c-clips" type="number" min="0" max="30" value="0" inputmode="numeric"></div><div><label for="c-pd">रोज़ कितने</label><select id="c-pd">${o('1', '1', '1')}${o('2', '2', '1')}${o('3', '3', '1')}</select></div></div>
+  <details><summary>और विकल्प</summary>
+  <div class="grid2"><div><label for="c-min">Clip कम से कम (सेकंड)</label><input id="c-min" type="number" min="10" max="120" value="25" inputmode="numeric"></div><div><label for="c-max">Clip ज़्यादा से ज़्यादा</label><input id="c-max" type="number" min="15" max="170" value="60" inputmode="numeric"></div></div>
+  <div class="grid2"><div><label for="c-or">Frame</label><select id="c-or">${o('blur', 'Blur background (पूरा video दिखे)', 'blur')}${o('crop', 'Center crop (full screen)', 'blur')}</select></div><div><label for="c-cap">Captions</label><select id="c-cap">${o('1', 'जलाओ (burned-in)', '1')}${o('0', 'नहीं', '1')}</select></div></div>
+  <div class="grid2"><div><label for="c-bud">Gemini calls की सीमा (5-20)</label><input id="c-bud" type="number" min="5" max="20" value="15" inputmode="numeric"></div><div><label for="c-wh">Whisper (captions न हों तो)</label><select id="c-wh">${o('small', 'small (बेहतर, धीमा)', 'small')}${o('base', 'base (तेज़)', 'small')}</select></div></div>
+  <div class="grid2"><div><label for="c-tz">Time zone</label><input id="c-tz" value="Asia/Kolkata"></div><div><label for="c-sd">पहला schedule दिन (खाली = कल)</label><input id="c-sd" type="date"></div></div>
+  <div class="grid2"><div><label for="c-lang">भाषा (खाली = अपने आप)</label><select id="c-lang">${o('', 'अपने आप', '')}${o('hi', 'Hindi', '')}${o('en', 'English', '')}</select></div><div><label for="c-mm">Video अधिकतम (मिनट)</label><input id="c-mm" type="number" min="5" max="300" value="240" inputmode="numeric"></div></div></details>
+  <p class="mu sm">Clips बनते ही सब एक साथ schedule हो जाते हैं (private + तय समय), और YouTube उसी समय खुद public करेगा। काम पूरा होने पर runner की सारी temporary files हट जाती हैं।</p>
+  <div class="row"><button class="btn grow" data-a="close">रद्द करो</button><button class="btn p grow" data-a="cstart">शुरू करो</button></div>`);
+}
+function keySheet() {
+  openSheet(`<h3>Gemini API key जोड़ो</h3><p class="mu sm" style="margin:2px 0 0">एक या कई keys paste करो (हर एक नई line में)। हर key अलग Google project की हो, तभी एक का quota खत्म होने पर दूसरी काम आएगी।</p>
+  <label for="k-keys">API keys</label><textarea id="k-keys" rows="4" placeholder="AIza…" autocomplete="off" spellcheck="false"></textarea>
+  <div class="row"><button class="btn grow" data-a="close">रद्द करो</button><button class="btn p grow" data-a="ksave">Save करो</button></div>`);
+}
+function cookieSheet() {
+  openSheet(`<h3>YouTube cookies</h3><p class="mu sm" style="margin:2px 0 0">“Get cookies.txt LOCALLY” जैसे extension से youtube.com की cookies.txt export करके यहाँ पूरी paste करो। Cookies encrypted सेव होती हैं।</p>
+  <label for="ck-t">cookies.txt की सामग्री</label><textarea id="ck-t" rows="6" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com&#9;TRUE&#9;/&#9;…" autocomplete="off" spellcheck="false"></textarea>
+  <div class="row"><button class="btn grow" data-a="close">रद्द करो</button><button class="btn p grow" data-a="cksave">Save करो</button></div>`);
+}
+
+let logT = null, logId = '', logKind = 'live';
+function logsSheet(id, kind) {
+  logId = id; logKind = kind || 'live'; const l = logKind === 'clip' ? { name: 'Clips' } : ST.lives.find(x => x.id === id);
+  openSheet(`<h3>Logs: ${esc(l ? l.name : '')}</h3><pre id="lg">लोड हो रहा है…</pre><div class="row"><button class="btn grow" data-a="close">बंद</button><button class="btn grow" data-a="copylog">Copy</button></div>`);
+  const pull = async () => { try { const r = await api((logKind === 'clip' ? '/api/cliplogs?id=' : '/api/logs?id=') + encodeURIComponent(id)); const p = $('#lg'); if (!p) return; const bot = p.scrollTop + p.clientHeight >= p.scrollHeight - 30; p.textContent = r.lines.join('\n') || 'अभी कोई log नहीं।'; if (bot) p.scrollTop = p.scrollHeight; } catch { } };
+  pull(); clearInterval(logT); logT = setInterval(pull, 3000);
+}
+
+// ---------- actions ----------
+const A = {
+  login,
+  tab: id => { ST.tab = id; location.hash = id; lastHtml = ''; if (id === 'videos') { ST.videos = null; refresh().catch(() => { }); } if (id === 'setup' && !ST.health) A.health(); if (id === 'clips') { ST.clips = null; refresh().catch(() => { }); } render(); },
+  health: async () => { ST.health = null; lastHtml = ''; render(); try { ST.health = await api('/api/health'); } catch (e) { ST.health = [{ name: 'जाँच नहीं हो पाई', ok: false, msg: e.message }]; } lastHtml = ''; render(); },
+  debug: async () => {
+    if (debugOn() && window.eruda && window.eruda._ll) { try { localStorage.removeItem('ll_debug'); } catch { } location.reload(); return; }
+    try { localStorage.setItem('ll_debug', '1'); } catch { }
+    try { await loadEruda(); toast('Debug console चालू। नीचे दाएँ गियर बटन दबाओ'); lastHtml = ''; if (alive) render(); } catch (e) { toast(e.message, true); }
+  },
+  logout: async () => { await post('/api/logout'); boot(); },
+  go: guard(async id => { const h = $('#h-' + id); await post('/api/start', { id, hours: h ? h.value : '' }); delete ST.hours[id]; toast('Start भेज दिया। Runner शुरू होने में 30-60 सेकंड लगते हैं'); await refresh(); }),
+  stop: guard(async id => { await post('/api/stop', { id }); toast('बंद करने का signal भेजा'); await refresh(); }),
+  reset: guard(async id => { if (await ask('Live रीसेट करें?', 'Runner job cancel होगा और status “बंद” हो जाएगा। चल रहा broadcast YouTube पर अपने आप पूरा किया जाएगा।', 'रीसेट करो', true)) { await post('/api/reset', { id }); await refresh(); } }),
+  startall: guard(async () => { const r = await post('/api/startall'); if (r.errors.length) toast(r.errors.join('\n'), true); else toast('सब live शुरू किए'); await refresh(); }),
+  stopall: guard(async () => { if (await ask('सब live बंद करें?', 'चल रहे सभी live रुक जाएंगे।', 'सब बंद करो', true)) { await post('/api/stopall'); await refresh(); } }),
+  edit: guard(id => editLive(id)), dup: guard(id => editLive(id, true)),
+  rm: guard(async id => { const l = ST.lives.find(x => x.id === id); if (await ask('Live delete करें?', `“${l.name}” हट जाएगा। Videos सुरक्षित रहेंगे।`, 'Delete करो', true)) { await del('/api/lives?id=' + id); await refresh(); } }),
+  logs: id => logsSheet(id),
+  copylog: () => { navigator.clipboard.writeText($('#lg').textContent).then(() => toast('Copy हो गया')); },
+  copy: a => navigator.clipboard.writeText(a).then(() => toast('Copy हो गया')),
+  close: closeSheet,
+  scrim: (_, e) => { if (e.target.classList.contains('scrim')) closeSheet(); },
+  yes: () => answer(true), no: () => answer(false),
+  savelive: guard(async () => { keepEdit(); const r = readEdit(); if (!r.name.trim()) throw new Error('Live का नाम डालो'); if (!r.videos.length) throw new Error('कम से कम एक video चुनो'); await post('/api/lives', r); closeSheet(); E = null; toast('Save हो गया'); await refresh(); }),
+  vadd: n => { const k = keepEdit(); E.videos.push(n); drawEdit(k.name); },
+  vrm: id => { const n = keepEdit(); E.videos.splice(+id, 1); drawEdit(n.name); },
+  vup: id => { const n = keepEdit(), i = +id; if (i > 0) [E.videos[i - 1], E.videos[i]] = [E.videos[i], E.videos[i - 1]]; drawEdit(n.name); },
+  vdn: id => { const n = keepEdit(), i = +id; if (i < E.videos.length - 1) [E.videos[i + 1], E.videos[i]] = [E.videos[i], E.videos[i + 1]]; drawEdit(n.name); },
+  vrefresh: guard(async () => { ST.videos = null; render(); await loadVideos(); lastHtml = ''; render(); }),
+  import: () => importSheet(),
+  doimport: guard(async () => { const url = $('#i-url').value.trim(); if (!url) throw new Error('Link डालो'); await post('/api/import', { url, name: $('#i-name').value, convert: $('#i-conv').value, orient: $('#i-or').value, quality: $('#i-q').value, fit: $('#i-fit').value }); closeSheet(); toast('Import शुरू। Runner चालू होने में 30-60 सेकंड लगते हैं'); await refresh(); }),
+  dismiss: guard(async id => { await del('/api/imports?id=' + id); await refresh(); }),
+  rmvid: guard(async (id, e) => { const n = e.target.dataset.n, used = +e.target.dataset.u; if (await ask('File हटाएं?', used ? `“${n}” ${used} live में लगी है। हटाने पर वहाँ से भी निकल जाएगी।` : `“${n}” Release से हमेशा के लिए हट जाएगी।`, 'हटाओ', true)) { await del(`/api/videos?id=${id}&name=${encodeURIComponent(n)}${used ? '&force=1' : ''}`); ST.videos = null; await refresh(); } }),
+  cnew: guard(() => clipSheet()),
+  cstart: guard(async () => {
+    const v = id => $('#' + id).value, url = v('c-url').trim(); if (!url) throw new Error('YouTube link डालो');
+    await post('/api/clipstart', { url, account: v('c-acc'), clips: v('c-clips'), perDay: v('c-pd'), minSec: v('c-min'), maxSec: v('c-max'), orient: v('c-or'), captions: v('c-cap') === '1', budget: v('c-bud'), whisper: v('c-wh'), tz: v('c-tz'), startDate: v('c-sd'), lang: v('c-lang'), maxVideoMin: v('c-mm') });
+    closeSheet(); toast('Job शुरू। Runner चालू होने में 30-60 सेकंड लगते हैं'); ST.clips = null; await refresh();
+  }),
+  cstop: guard(async id => { await post('/api/clipstop', { id }); toast('बंद करने का signal भेजा'); ST.clips = null; await refresh(); }),
+  cresume: guard(async id => { await post('/api/clipresume', { id }); toast('दोबारा शुरू किया'); ST.clips = null; await refresh(); }),
+  creset: guard(async id => { if (await ask('जॉब रीसेट करें?', 'Runner job cancel होगा। जो clips schedule हो चुके हैं वे YouTube पर रहेंगे।', 'रीसेट करो', true)) { await post('/api/clipreset', { id }); ST.clips = null; await refresh(); } }),
+  crm: guard(async id => { if (await ask('जॉब हटाएं?', 'यह सिर्फ़ dashboard का record हटाएगा। YouTube पर schedule हो चुके videos नहीं हटेंगे। Release में बचे clips हों तो वे भी हट जाएँगे।', 'Delete करो', true)) { await del('/api/clipjobs?id=' + id); ST.clips = null; await refresh(); } }),
+  clogs: id => logsSheet(id, 'clip'),
+  kadd: () => keySheet(),
+  ksave: guard(async () => { const r = await post('/api/gkeys', { keys: $('#k-keys').value }); closeSheet(); const m = [r.added ? r.added + ' key जुड़ी' : '', r.dup ? r.dup + ' पहले से थी' : '', r.bad.length ? 'ग़लत: ' + r.bad.join(', ') : ''].filter(Boolean).join(' · '); toast(m || 'कुछ नहीं जुड़ा', !r.added && r.bad.length > 0); ST.clips = null; await refresh(); }),
+  krm: guard(async (id, e) => { if (await ask('Key हटाएं?', `“${e.target.dataset.n}” हट जाएगी।`, 'हटाओ', true)) { await del('/api/gkeys?id=' + id); ST.clips = null; await refresh(); } }),
+  kreset: guard(async () => { await post('/api/gkeyreset', {}); toast('सब keys दोबारा चालू'); ST.clips = null; await refresh(); }),
+  ckadd: () => cookieSheet(),
+  cksave: guard(async () => { await post('/api/ytcookies', { text: $('#ck-t').value }); closeSheet(); toast('Cookies सेव हो गईं'); ST.clips = null; await refresh(); }),
+  ckrm: guard(async () => { await del('/api/ytcookies'); toast('Cookies हट गईं'); ST.clips = null; await refresh(); }),
+  connect: guard(async () => { const r = await api('/api/google/url'); location.href = r.url; }),
+  rmacc: guard(async id => { if (await ask('चैनल हटाएं?', 'इस चैनल का login हट जाएगा। जिन lives में यह लगा है वहाँ पहले दूसरा चैनल चुनो।', 'हटाओ', true)) { await del('/api/accounts?id=' + id); await refresh(); } })
+};
+document.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t) return; if (t.tagName === 'A') e.preventDefault(); const f = A[t.dataset.a]; if (f) f(t.dataset.id || t.dataset.n, e); });
+document.addEventListener('input', e => { if (e.target.dataset.h) ST.hours[e.target.dataset.h] = e.target.value; });
+boot();
+</script>
+</body>
+</html>

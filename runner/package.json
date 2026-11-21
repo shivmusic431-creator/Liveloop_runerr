@@ -1,0 +1,9 @@
+{
+  "name": "liveloop-runner",
+  "version": "3.1.0",
+  "private": true,
+  "description": "GitHub Actions par chalne wala LiveLoop runner (zero-dependency)",
+  "engines": {
+    "node": ">=24"
+  }
+}

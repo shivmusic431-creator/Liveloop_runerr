@@ -1,0 +1,43 @@
+name: LiveLoop - Video Import
+
+# Dashboard "Link se add" dabane par chalta hai. Link Firestore me rehta hai (yahan input me nahi),
+# taaki public repo ke logs me kisi ka link/token na dikhe.
+on:
+  workflow_dispatch:
+    inputs:
+      import_id:
+        description: "Import ID (dashboard apne aap bharta hai)"
+        required: true
+        type: string
+
+concurrency:
+  group: import-${{ inputs.import_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      IMPORT_ID: ${{ inputs.import_id }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      VIDEOS_TOKEN: ${{ secrets.VIDEOS_TOKEN }}
+      VIDEOS_REPO: ${{ secrets.VIDEOS_REPO }}
+      VIDEOS_TAG: ${{ secrets.VIDEOS_TAG || 'videos' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: runner
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: FFmpeg install
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg
+      - name: Import
+        run: node runner/import.js
+      - name: Fail hone par status saaf karo
+        if: failure() || cancelled()
+        run: node runner/mark-import-failed.js
